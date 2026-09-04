@@ -7,7 +7,6 @@ import (
 	"os/signal"
 	"strings"
 	"sync"
-	"syscall"
 
 	"github.com/charmbracelet/x/ansi"
 	"golang.org/x/term"
@@ -63,8 +62,7 @@ func (s *Screen) Start(statusFn func(width int) string, inputFn func(width int) 
 	}
 	s.oldState = old
 
-	s.winch = make(chan os.Signal, 1)
-	signal.Notify(s.winch, syscall.SIGWINCH)
+	notifyWinch(s.winch)
 	s.done = make(chan struct{})
 	go func() {
 		for {
