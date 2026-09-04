@@ -62,6 +62,7 @@ func (s *Screen) Start(statusFn func(width int) string, inputFn func(width int) 
 	}
 	s.oldState = old
 
+	s.winch = make(chan os.Signal, 1)
 	notifyWinch(s.winch)
 	s.done = make(chan struct{})
 	go func() {
