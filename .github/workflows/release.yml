@@ -1,0 +1,164 @@
+# Release workflow. It runs when you push a SemVer tag such as v0.1.0.
+# A prerelease suffix is allowed, for example v0.1.0-rc.1. The filter
+# requires digits after "v", so tags such as v2 or vendor never trigger it.
+# "*" still does not match "/", so "v1/beta" cannot trigger it either.
+#
+# Note: a tag push runs the workflow file from the commit the tag points to,
+# so this file must exist on that commit before the tag is created.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test:
+    name: Test before release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - uses: arduino/setup-task@v3
+        with:
+          version: "3.x"
+          repo-token: ${{ github.token }}
+
+      - name: task fmt:check
+        run: task fmt:check
+
+      - name: task vet
+        run: task vet
+
+      - name: task test
+        run: task test
+
+  build:
+    name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
+    needs: test
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {
+              goos: linux,
+              goarch: amd64,
+              runs-on: ubuntu-latest,
+              ext: "",
+              native: true,
+            }
+          - {
+              goos: linux,
+              goarch: arm64,
+              runs-on: ubuntu-latest,
+              ext: "",
+              native: false,
+            }
+          - {
+              goos: darwin,
+              goarch: amd64,
+              runs-on: macos-latest,
+              ext: "",
+              native: false,
+            }
+          - {
+              goos: darwin,
+              goarch: arm64,
+              runs-on: macos-latest,
+              ext: "",
+              native: true,
+            }
+          - {
+              goos: windows,
+              goarch: amd64,
+              runs-on: windows-latest,
+              ext: ".exe",
+              native: true,
+            }
+          - {
+              goos: windows,
+              goarch: arm64,
+              runs-on: windows-latest,
+              ext: ".exe",
+              native: false,
+            }
+    env:
+      TAG: ${{ github.ref_name }}
+      GOOS: ${{ matrix.goos }}
+      GOARCH: ${{ matrix.goarch }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - uses: arduino/setup-task@v3
+        with:
+          version: "3.x"
+          repo-token: ${{ github.token }}
+
+      - name: Build
+        env:
+          CGO_ENABLED: "0"
+        run: task build:versioned VERSION="$TAG" BIN="bin/bililive${{ matrix.ext }}"
+
+      - name: Package (tar.gz)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p dist
+          tar -czf "dist/bililive_${TAG}_${GOOS}_${GOARCH}.tar.gz" -C bin "bililive${{ matrix.ext }}"
+
+      - name: Package (zip)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Compress-Archive -Path "bin/bililive${{ matrix.ext }}" -DestinationPath "dist/bililive_${env:TAG}_windows_${{ matrix.goarch }}.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: bililive-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/
+
+  release:
+    name: Publish GitHub release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: cd dist && sha256sum bililive_* > checksums.txt
+
+      - name: Create release and upload assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; uploading assets with clobber"
+          else
+            gh release create "$TAG" --title "bililive $TAG" --generate-notes
+          fi
+          gh release upload "$TAG" dist/* --clobber

@@ -1,0 +1,76 @@
+version: "3"
+
+vars:
+  BIN: bin/bililive
+  PKGS: ./...
+  MAIN_PKG: .
+  VERSION: dev
+  VERSION_CMD: github.com/Arcadi4/bililive-cli/cmd.version
+
+tasks:
+  default:
+    desc: Run format check, vet, tests, and build
+    cmds:
+      - task: fmt:check
+      - task: vet
+      - task: test
+      - task: build
+
+  build:
+    desc: Build the bililive binary
+    method: none
+    cmds:
+      - go build -o {{.BIN}} {{.MAIN_PKG}}
+
+  build:versioned:
+    desc: Build with explicit VERSION (defaults to dev), e.g. `task build:versioned VERSION=v0.1.0`
+    method: none
+    cmds:
+      - go build -ldflags "-X {{.VERSION_CMD}}={{.VERSION}}" -o {{.BIN}} {{.MAIN_PKG}}
+
+  run:
+    desc: Run a command without building, e.g. `task run -- watch 1878516995 --plain`
+    cmds:
+      - go run {{.MAIN_PKG}} {{.CLI_ARGS}}
+
+  fmt:
+    desc: Format all Go code in place
+    cmds:
+      - gofmt -w .
+    sources:
+      - "**/*.go"
+
+  fmt:check:
+    desc: Fail if any file is unformatted (CI gate)
+    cmds:
+      - test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+
+  vet:
+    desc: Run go vet on all packages
+    cmds:
+      - go vet {{.PKGS}}
+
+  test:
+    desc: Run all tests
+    cmds:
+      - go test {{.PKGS}}
+
+  test:verbose:
+    desc: Run tests with verbose output, e.g. `task test:verbose -- ./bili/ -run TestName`
+    cmds:
+      - go test -v {{.CLI_ARGS}}
+
+  tidy:
+    desc: Resolve and prune module dependencies
+    cmds:
+      - go mod tidy
+
+  watch:
+    desc: Watch the canonical test room in plain mode, e.g. `task watch -- 1878516995`
+    cmds:
+      - go run {{.MAIN_PKG}} watch {{.CLI_ARGS}} --plain
+
+  clean:
+    desc: Remove build output
+    cmds:
+      - rm -rf bin/
