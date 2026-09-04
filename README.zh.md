@@ -26,6 +26,8 @@ bilibili终端弹幕姬
 - 其他直播间状态变化
 - 发送/回复弹幕
 
+<img src="img/demo.png" align="center" alt="demo"/>
+
 ## 安装
 
 使用 Go 1.27+ 直接安装（二进制名称会变成 `bililive-cli` 而不是 `bililive`）：

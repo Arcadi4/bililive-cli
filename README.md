@@ -26,6 +26,8 @@ bililive-cli (`bililive`) follows a bilibili live room and logs its audience int
 - other room status changes
 - send /reply to chats
 
+<img src="img/demo.png" align="center" alt="demo"/>
+
 ## Installation
 
 Install directly with Go 1.27+ (the binary will be named `bililive-cli` rather than `bililive`):
