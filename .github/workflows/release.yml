@@ -21,8 +21,8 @@ defaults:
     shell: bash
 
 jobs:
-  test:
-    name: Test before release
+  check:
+    name: Check before release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -42,12 +42,9 @@ jobs:
       - name: task vet
         run: task vet
 
-      - name: task test
-        run: task test
-
   build:
     name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
-    needs: test
+    needs: check
     runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: false

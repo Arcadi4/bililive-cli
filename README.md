@@ -107,7 +107,7 @@ bililive send 1878516995 "你好"
 Requires Go 1.27.
 
 ```bash
-task                                  # gofmt check, go vet, go test, build
+task                                  # gofmt check, go vet, build
 task run -- watch 1878516995 --plain  # run without building
 task build                            # generate bin/bililive
 ```

@@ -107,7 +107,7 @@ bililive send 1878516995 "你好"
 需要 Go 1.27。
 
 ```bash
-task                                  # gofmt、go vet、go test、构建
+task                                  # gofmt、go vet、构建
 task run -- watch 1878516995 --plain  # 不构建直接运行
 task build                            # 生成 bin/bililive
 ```
