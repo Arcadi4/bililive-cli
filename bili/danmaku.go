@@ -154,7 +154,7 @@ func (d *DanmakuClient) connectOnce(ctx context.Context) error {
 	}
 	// Auth sends a token plus the session cookie header like the web
 	// client. Since 2025, servers close anonymous handshakes with no reply.
-	dialer := websocket.Dialer{HandshakeTimeout: 10 * time.Second}
+	dialer := websocket.Dialer{HandshakeTimeout: 10 * time.Second, Proxy: http.ProxyFromEnvironment}
 	hdr := http.Header{}
 	hdr.Set("User-Agent", userAgent)
 	hdr.Set("Origin", "https://live.bilibili.com")
