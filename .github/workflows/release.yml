@@ -161,3 +161,29 @@ jobs:
             gh release create "$TAG" --title "bililive $TAG" --generate-notes
           fi
           gh release upload "$TAG" dist/* --clobber
+
+  update-homebrew-tap:
+    name: Update Homebrew tap
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger arcadi4/homebrew-tap formula update
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$GH_TOKEN" ]; then
+            echo "HOMEBREW_TAP_TOKEN secret is not set; skipping tap update."
+            exit 0
+          fi
+
+          if [[ "$TAG" == *-* ]]; then
+            echo "$TAG is a prerelease tag; skipping tap update."
+            exit 0
+          fi
+
+          gh workflow run update-bililive-cli-formula.yml \
+            --repo arcadi4/homebrew-tap \
+            --field version="${TAG#v}"
